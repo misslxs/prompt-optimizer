@@ -1,5 +1,5 @@
 import { PromptRecord } from "../history/types";
-import { StreamHandlers } from "../llm/types";
+import { Message, StreamHandlers } from "../llm/types";
 
 /**
  * 工具调用相关类型
@@ -112,7 +112,7 @@ export interface MessageOptimizationRequest {
  */
 export interface CustomConversationRequest {
   modelKey: string;
-  messages: ConversationMessage[]; // 使用相同的消息结构
+  messages: Message[]; // 支持多模态消息结构
   variables: Record<string, string>; // 包含预定义+自定义变量
   tools?: ToolDefinition[]; // 🆕 工具定义支持
   // 🆕 上下文模式（用于变量替换策略）

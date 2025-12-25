@@ -219,6 +219,8 @@ export interface TestAreaPanelProps extends BaseComponentProps {
   advancedModeEnabled?: boolean
   /** 测试内容 */
   testContent?: string
+  /** 测试图片 */
+  testImage?: import('../components/types/test-area').TestImagePayload | null
   /** 主要操作按钮文字 */
   primaryActionText?: string
   /** 主要操作是否禁用 */
@@ -236,6 +238,8 @@ export interface TestAreaPanelEvents extends BaseComponentEvents {
   'update:isCompareMode': (enabled: boolean) => void
   /** 测试内容变更 */
   'update:testContent': (content: string) => void
+  /** 测试图片变更 */
+  'update:testImage': (image: import('../components/types/test-area').TestImagePayload | null) => void
   /** 对比模式切换事件 */
   compareToggle: (enabled: boolean) => void
   /** 主要操作（测试）事件 */

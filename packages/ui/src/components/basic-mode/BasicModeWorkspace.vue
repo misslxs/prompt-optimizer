@@ -174,6 +174,8 @@
             :predefined-variables="predefinedVariables"
             :test-content="testContent"
             @update:test-content="emit('update:testContent', $event)"
+            :test-image="testImage"
+            @update:test-image="emit('update:testImage', $event)"
             :is-compare-mode="isCompareMode"
             @update:is-compare-mode="emit('update:isCompareMode', $event)"
             :enable-compare-mode="true"
@@ -329,7 +331,7 @@ import { EvaluationScoreBadge } from '../evaluation'
 import type { OptimizationMode } from '../../types'
 import type { PromptRecord, Template, EvaluationResult, ScoreLevel } from '@prompt-optimizer/core'
 import type { PromptPanelInstance } from '../types/prompt-panel'
-import type { TestAreaPanelInstance } from '../types/test-area'
+import type { TestAreaPanelInstance, TestImagePayload } from '../types/test-area'
 import type { SaveFavoritePayload, IteratePayload } from '../../types/workspace'
 
 // ========================
@@ -363,6 +365,8 @@ interface Props {
     // === 测试状态（由父组件管理）===
     /** 测试内容 */
     testContent?: string
+    /** 测试图片 */
+    testImage?: TestImagePayload | null
     /** 是否启用对比模式 */
     isCompareMode: boolean
     /** 原始测试结果 */
@@ -478,6 +482,7 @@ const emit = defineEmits<{
     'update:optimizedPrompt': [value: string]
     'update:selectedIterateTemplate': [value: Template | null]
     'update:testContent': [value: string]
+    'update:testImage': [value: TestImagePayload | null]
     'update:isCompareMode': [value: boolean]
 
     // === 优化操作事件 ===

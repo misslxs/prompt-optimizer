@@ -46,8 +46,8 @@
 
       <!-- 主要内容区域 - 严格控制在剩余空间内 -->
       <NLayoutContent has-sider
-        style="flex: 1; min-height: 0; overflow: hidden;"
-        content-style="height: 100%; max-height: 100%; min-height: 0; box-sizing: border-box; padding: 24px clamp(16px, 2vw, 48px) 40px; display: flex; flex-direction: column; align-items: stretch; overflow: hidden;"
+        style="flex: 1; min-height: 0; overflow: auto;"
+        content-style="min-height: 0; box-sizing: border-box; padding: 24px clamp(16px, 2vw, 48px) 40px; display: flex; flex-direction: column; align-items: stretch;"
       >
         <div class="main-content-wrapper">
           <slot name="main"></slot>
@@ -122,16 +122,14 @@ const logoSize = computed(() => {
 .main-content-wrapper {
   width: 100%;
   margin: 0;
-  height: 100%;
+  height: auto;
   display: flex;
   flex-direction: column;
-  flex: 1;
   min-height: 0;
-  overflow: auto;
+  overflow: visible;
 }
 
 .main-content-wrapper > * {
-  flex: 1;
   min-height: 0;
 }
 

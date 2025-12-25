@@ -2,10 +2,11 @@ import { reactive, type Ref, type ComputedRef } from 'vue'
 import { useToast } from '../ui/useToast'
 import { useI18n } from 'vue-i18n'
 import { getErrorMessage } from '../../utils/error'
-import type { OptimizationMode, ToolDefinition, ToolCall, ToolCallResult, ConversationMessage } from '@prompt-optimizer/core'
+import type { ToolDefinition, ToolCall, ToolCallResult, ConversationMessage, Message, MessageContentPart } from '@prompt-optimizer/core'
 import type { AppServices } from '../../types/services'
 import type { VariableManagerHooks } from './useVariableManager'
 import type { TestAreaPanelInstance } from '../../components/types/test-area'
+import type { TestImagePayload } from '../../components/types/test-area'
 
 /**
  * 多对话模式专用测试 Composable
@@ -54,7 +55,8 @@ export function useConversationTester(
     executeTest: async (
       isCompareMode: boolean,
       testVariables?: Record<string, string>,
-      testPanelRef?: TestAreaPanelInstance | null
+      testPanelRef?: TestAreaPanelInstance | null,
+      testImage?: TestImagePayload | null
     ) => {
       if (!services.value?.promptService) {
         toast.error(t('toast.error.serviceInit'))
@@ -74,12 +76,12 @@ export function useConversationTester(
 
       if (isCompareMode) {
         // 对比模式：并发测试原始和优化会话
-        const originalTestPromise = state.testConversation('original', testVariables, testPanelRef)
-        const optimizedTestPromise = state.testConversation('optimized', testVariables, testPanelRef)
+        const originalTestPromise = state.testConversation('original', testVariables, testPanelRef, testImage)
+        const optimizedTestPromise = state.testConversation('optimized', testVariables, testPanelRef, testImage)
         await Promise.all([originalTestPromise, optimizedTestPromise])
       } else {
         // 单一模式：只测试优化后的会话
-        await state.testConversation('optimized', testVariables, testPanelRef)
+        await state.testConversation('optimized', testVariables, testPanelRef, testImage)
       }
     },
 
@@ -89,7 +91,8 @@ export function useConversationTester(
     testConversation: async (
       type: 'original' | 'optimized',
       testVars?: Record<string, string>,
-      testPanelRef?: TestAreaPanelInstance | null
+      testPanelRef?: TestAreaPanelInstance | null,
+      testImage?: TestImagePayload | null
     ) => {
       const isOriginal = type === 'original'
 
@@ -144,14 +147,48 @@ export function useConversationTester(
         // 构造会话消息：
         // - 原始会话（original）：只有选中的消息使用 originalContent（V0），其他消息使用当前版本
         // - 优化会话（optimized）：所有消息都使用当前版本
-        const messages: ConversationMessage[] = isOriginal
+        const messages: Message[] = (isOriginal
           ? optimizationContext.value.map(msg => ({
               ...msg,
               content: (selectedMessageId?.value && msg.id === selectedMessageId.value)
                 ? (msg.originalContent || msg.content)
                 : msg.content
             }))
-          : optimizationContext.value
+          : optimizationContext.value).map((msg) => ({
+            role: msg.role,
+            content: msg.content,
+            name: msg.name,
+            tool_calls: msg.tool_calls,
+            tool_call_id: msg.tool_call_id,
+          }))
+
+        if (testImage?.isValid) {
+          const imagePart: MessageContentPart = {
+            type: 'image_url',
+            image_url: { url: testImage.url },
+          }
+
+          for (let i = messages.length - 1; i >= 0; i -= 1) {
+            if (messages[i].role !== 'user') continue
+            const content = messages[i].content
+            if (typeof content === 'string') {
+              const parts: MessageContentPart[] = []
+              if (content.trim()) {
+                parts.push({ type: 'text', text: content })
+              }
+              parts.push(imagePart)
+              messages[i] = { ...messages[i], content: parts }
+            } else {
+              messages[i] = { ...messages[i], content: [...content, imagePart] }
+            }
+            break
+          }
+
+          const hasUserMessage = messages.some((msg) => msg.role === 'user')
+          if (!hasUserMessage) {
+            messages.push({ role: 'user', content: [imagePart] })
+          }
+        }
 
         // 检查是否有工具
         const hasTools = optimizationContextTools.value?.length > 0

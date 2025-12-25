@@ -111,6 +111,8 @@
                             :is-compare-mode="isCompareMode"
                             @update:isCompareMode="isCompareMode = $event"
                             @compare-toggle="handleTestAreaCompareToggle"
+                            :test-image="testImage"
+                            @update:test-image="testImage = $event"
                             @optimize="handleOptimizePrompt"
                             @iterate="handleIteratePrompt"
                             @switch-version="handleSwitchVersion"
@@ -333,6 +335,8 @@
                             @update:selected-iterate-template="optimizer.selectedIterateTemplate = $event"
                             :test-content="testContent"
                             @update:test-content="testContent = $event"
+                            :test-image="testImage"
+                            @update:test-image="testImage = $event"
                             :is-compare-mode="isCompareMode"
                             @update:is-compare-mode="isCompareMode = $event"
                             :original-result="testResults.originalResult"
@@ -682,6 +686,7 @@ import { DataTransformer, OptionAccessors } from '../../utils/data-transformer'
 
 // Types
 import type { OptimizationMode, ConversationMessage, ModelSelectOption, TemplateSelectOption, TestAreaPanelInstance } from '../../types'
+import type { TestImagePayload } from '../types/test-area'
 import type { IPromptService, PromptRecordChain, PromptRecord } from "@prompt-optimizer/core";
 
 // 1. 基础 composables
@@ -782,6 +787,7 @@ const handleModeSelect = async (mode: "basic" | "pro" | "image") => {
 
 // 测试内容状态
 const testContent = ref("");
+const testImage = ref<TestImagePayload | null>(null);
 const isCompareMode = ref(true);
 
 // 响应式布局
@@ -1489,7 +1495,8 @@ const handleTestAreaTest = async (testVariables?: Record<string, string>) => {
         optimizer.optimizedPrompt,
         testContent.value,
         isCompareMode.value,
-        testVariables || {}
+        testVariables || {},
+        testImage.value
     );
 };
 

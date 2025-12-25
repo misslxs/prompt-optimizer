@@ -11,6 +11,7 @@ import type {
   ToolDefinition,
   ToolCall
 } from '../types'
+import { RequestConfigError } from '../errors'
 
 // 定义新版 SDK 需要的类型（SDK 可能通过主导出提供）
 type Content = any
@@ -450,21 +451,27 @@ export class GeminiAdapter extends AbstractTextProviderAdapter {
     const formattedContents: Content[] = []
 
     for (const msg of messages) {
+      const content = this.extractTextContent(msg.content)
       if (msg.role === 'user') {
         formattedContents.push({
           role: 'user',
-          parts: [{ text: msg.content }]
+          parts: [{ text: content }]
         })
       } else if (msg.role === 'assistant') {
         formattedContents.push({
           role: 'model', // Gemini 使用 'model' 而非 'assistant'
-          parts: [{ text: msg.content }]
+          parts: [{ text: content }]
         })
       }
       // 跳过 system 消息，它们会在 systemInstruction 中处理
     }
 
     return formattedContents
+  }
+
+  private extractTextContent(content: Message['content']): string {
+    if (typeof content === 'string') return content
+    throw new RequestConfigError('Gemini adapter does not support image content')
   }
 
   // ===== 核心方法实现 =====
@@ -482,7 +489,9 @@ export class GeminiAdapter extends AbstractTextProviderAdapter {
     // 提取系统消息
     const systemMessages = messages.filter((msg) => msg.role === 'system')
     const systemInstruction =
-      systemMessages.length > 0 ? systemMessages.map((msg) => msg.content).join('\n') : ''
+      systemMessages.length > 0
+        ? systemMessages.map((msg) => this.extractTextContent(msg.content)).join('\n')
+        : ''
 
     // 过滤出用户和助手消息
     const conversationMessages = messages.filter((msg) => msg.role !== 'system')
@@ -586,7 +595,9 @@ export class GeminiAdapter extends AbstractTextProviderAdapter {
     // 提取系统消息
     const systemMessages = messages.filter((msg) => msg.role === 'system')
     const systemInstruction =
-      systemMessages.length > 0 ? systemMessages.map((msg) => msg.content).join('\n') : ''
+      systemMessages.length > 0
+        ? systemMessages.map((msg) => this.extractTextContent(msg.content)).join('\n')
+        : ''
 
     // 过滤出用户和助手消息
     const conversationMessages = messages.filter((msg) => msg.role !== 'system')
@@ -697,7 +708,9 @@ export class GeminiAdapter extends AbstractTextProviderAdapter {
     // 提取系统消息
     const systemMessages = messages.filter((msg) => msg.role === 'system')
     const systemInstruction =
-      systemMessages.length > 0 ? systemMessages.map((msg) => msg.content).join('\n') : ''
+      systemMessages.length > 0
+        ? systemMessages.map((msg) => this.extractTextContent(msg.content)).join('\n')
+        : ''
 
     // 过滤出用户和助手消息
     const conversationMessages = messages.filter((msg) => msg.role !== 'system')

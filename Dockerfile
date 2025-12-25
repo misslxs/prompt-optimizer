@@ -1,4 +1,4 @@
-FROM node:20-slim AS base
+FROM docker.m.daocloud.io/library/node:20-slim AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN npm install -g corepack@latest && corepack enable
@@ -10,7 +10,7 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 RUN pnpm run build
 RUN pnpm mcp:build
 
-FROM nginx:stable-alpine
+FROM docker.m.daocloud.io/library/nginx:stable-alpine
 # 安装htpasswd工具、dos2unix和supervisor
 RUN apk add --no-cache apache2-utils dos2unix supervisor nodejs npm gettext curl
 

@@ -143,6 +143,26 @@
             </NSpace>
         </NModal>
 
+        <!-- 测试图片输入（系统提示词模式） -->
+        <NCard
+            v-if="showImageInput"
+            :style="{ flexShrink: 0 }"
+            size="small"
+        >
+            <TestInputSection
+                v-model="imageOnlyContent"
+                v-model:image-value="testImageProxy"
+                :label="t('test.content')"
+                :placeholder="t('test.placeholder')"
+                :disabled="isTestRunning"
+                :mode="adaptiveInputMode"
+                :size="adaptiveButtonSize"
+                :enable-fullscreen="false"
+                :show-text-input="false"
+                :show-image-input="true"
+            />
+        </NCard>
+
         <!-- 控制工具栏 -->
         <NCard :style="{ flexShrink: 0 }" size="small">
             <TestControlBar
@@ -291,6 +311,8 @@ import { useDebounceThrottle } from "../../composables/performance/useDebounceTh
 import TestControlBar from "../TestControlBar.vue";
 import TestResultSection from "../TestResultSection.vue";
 import ToolCallDisplay from "../ToolCallDisplay.vue";
+import TestInputSection from "../TestInputSection.vue";
+import type { TestImagePayload } from "../types/test-area";
 
 const { t } = useI18n();
 const message = useMessage();
@@ -323,6 +345,9 @@ interface Props {
     globalVariables?: Record<string, string>;
     predefinedVariables?: Record<string, string>;
     temporaryVariables?: Record<string, string>;
+
+    // 测试图片（系统提示词模式）
+    testImage?: TestImagePayload | null;
 
     // 布局配置
     inputMode?: "compact" | "normal";
@@ -369,6 +394,7 @@ const props = withDefaults(defineProps<Props>(), {
     globalVariables: () => ({}),
     predefinedVariables: () => ({}),
     temporaryVariables: () => ({}),
+    testImage: null,
     // 评估默认值
     showEvaluation: false,
     hasOriginalResult: false,
@@ -391,6 +417,7 @@ const emit = defineEmits<{
     "compare-toggle": [];
     "open-variable-manager": [];
     "open-global-variables": [];
+    "update:testImage": [value: TestImagePayload | null];
     "variable-change": [name: string, value: string];
     "save-to-global": [name: string, value: string];
     "tool-call": [toolCall: ToolCallResult];
@@ -409,6 +436,14 @@ const emit = defineEmits<{
 const toolCalls = ref<ToolCallResult[]>([]);
 const originalToolCalls = ref<ToolCallResult[]>([]);
 const optimizedToolCalls = ref<ToolCallResult[]>([]);
+const imageOnlyContent = ref("");
+
+const testImageProxy = computed({
+    get: () => props.testImage || null,
+    set: (value: TestImagePayload | null) => emit("update:testImage", value),
+});
+
+const showImageInput = computed(() => props.optimizationMode === "system");
 
 // 🆕 处理对比模式切换
 const handleCompareToggle = () => {
@@ -452,6 +487,10 @@ const clearToolCalls = (testType?: 'original' | 'optimized' | 'both') => {
 // 响应式布局配置
 const adaptiveButtonSize = computed(() => {
     return buttonSize.value;
+});
+
+const adaptiveInputMode = computed(() => {
+    return props.inputMode || "normal";
 });
 
 const adaptiveResultVerticalLayout = computed(() => {

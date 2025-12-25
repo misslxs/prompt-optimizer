@@ -39,6 +39,8 @@ export { ElectronHistoryManagerProxy } from './services/history/electron-proxy'
 export type {
   ILLMService,
   Message,
+  MessageContent,
+  MessageContentPart,
   StreamHandlers,
   LLMResponse,
   ModelInfo,

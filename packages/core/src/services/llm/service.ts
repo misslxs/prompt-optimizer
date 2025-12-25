@@ -1,4 +1,4 @@
-import { ILLMService, Message, StreamHandlers, LLMResponse, ModelOption, ToolDefinition } from './types';
+import { ILLMService, Message, MessageContentPart, StreamHandlers, LLMResponse, ModelOption, ToolDefinition } from './types';
 import type { TextModelConfig, ModelConfig } from '../model/types';
 import { ModelManager } from '../model/manager';
 import { APIError, RequestConfigError } from './errors';
@@ -13,6 +13,14 @@ import { mergeOverrides, splitOverridesBySchema } from '../model/parameter-utils
  */
 export class LLMService implements ILLMService {
   private registry: ITextAdapterRegistry;
+  private readonly multimodalProviders = new Set([
+    'openai',
+    'openrouter',
+    'deepseek',
+    'zhipu',
+    'siliconflow',
+    'dashscope'
+  ]);
 
   constructor(
     private modelManager: ModelManager,
@@ -24,7 +32,7 @@ export class LLMService implements ILLMService {
   /**
    * 验证消息格式
    */
-  private validateMessages(messages: Message[]): void {
+  private validateMessages(messages: Message[], providerId?: string): void {
     if (!Array.isArray(messages)) {
       throw new RequestConfigError('消息必须是数组格式');
     }
@@ -38,10 +46,37 @@ export class LLMService implements ILLMService {
       if (!['system', 'user', 'assistant', 'tool'].includes(msg.role)) {
         throw new RequestConfigError(`不支持的消息类型: ${msg.role}`);
       }
-      if (typeof msg.content !== 'string') {
-        throw new RequestConfigError('消息内容必须是字符串');
+      if (typeof msg.content === 'string') {
+        return;
       }
+      if (!Array.isArray(msg.content) || msg.content.length === 0) {
+        throw new RequestConfigError('消息内容必须是字符串或非空数组');
+      }
+      msg.content.forEach((part) => {
+        if (!this.isValidContentPart(part)) {
+          throw new RequestConfigError('消息内容包含无效的多模态片段');
+        }
+      });
     });
+
+    if (providerId && this.hasImageContent(messages) && !this.multimodalProviders.has(providerId)) {
+      throw new RequestConfigError('当前模型提供商暂不支持图片输入');
+    }
+  }
+
+  private hasImageContent(messages: Message[]): boolean {
+    return messages.some((msg) => Array.isArray(msg.content) && msg.content.some((part) => part.type === 'image_url'));
+  }
+
+  private isValidContentPart(part: MessageContentPart): boolean {
+    if (!part || typeof part !== 'object' || !('type' in part)) return false;
+    if (part.type === 'text') {
+      return typeof part.text === 'string';
+    }
+    if (part.type === 'image_url') {
+      return typeof part.image_url?.url === 'string';
+    }
+    return false;
   }
 
   /**
@@ -77,7 +112,7 @@ export class LLMService implements ILLMService {
       }
 
       this.validateModelConfig(modelConfig);
-      this.validateMessages(messages);
+      this.validateMessages(messages, modelConfig.providerMeta.id);
 
       console.log('发送消息:', {
         provider: modelConfig.providerMeta.id,
@@ -122,7 +157,6 @@ export class LLMService implements ILLMService {
   ): Promise<void> {
     try {
       console.log('开始流式请求:', { provider, messagesCount: messages.length });
-      this.validateMessages(messages);
 
       const modelConfig = await this.modelManager.getModel(provider);
       if (!modelConfig) {
@@ -130,6 +164,7 @@ export class LLMService implements ILLMService {
       }
 
       this.validateModelConfig(modelConfig);
+      this.validateMessages(messages, modelConfig.providerMeta.id);
 
       console.log('获取到模型实例:', {
         provider: modelConfig.providerMeta.id,
@@ -168,14 +203,13 @@ export class LLMService implements ILLMService {
         toolsCount: tools.length
       });
 
-      this.validateMessages(messages);
-
       const modelConfig = await this.modelManager.getModel(provider);
       if (!modelConfig) {
         throw new RequestConfigError(`模型 ${provider} 不存在`);
       }
 
       this.validateModelConfig(modelConfig);
+      this.validateMessages(messages, modelConfig.providerMeta.id);
 
       console.log('获取到模型实例（带工具）:', {
         provider: modelConfig.providerMeta.id,

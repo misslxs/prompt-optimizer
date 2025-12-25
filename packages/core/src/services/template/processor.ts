@@ -1,5 +1,5 @@
 import { Template } from "./types";
-import { Message } from "../llm/types";
+import { Message, MessageContent } from "../llm/types";
 import { Mustache } from "./minimal";
 import type {
   OptimizationMode,
@@ -193,7 +193,7 @@ export class TemplateProcessor {
    * 用于测试阶段实际替换变量
    */
   static processConversationMessages(
-    messages: ConversationMessage[],
+    messages: Message[],
     variables: Record<string, string>,
   ): Message[] {
     if (!messages || messages.length === 0) {
@@ -203,12 +203,28 @@ export class TemplateProcessor {
     return messages.map((msg) => {
       // 使用 Mustache 进行变量替换
       // Mustache 会自动保留值中的占位符，无需特殊处理
-      const processedContent = Mustache.render(msg.content, variables);
+      const processedContent = this.processMessageContent(msg.content, variables);
 
       return {
         role: msg.role,
         content: processedContent,
       };
+    });
+  }
+
+  private static processMessageContent(
+    content: MessageContent,
+    variables: Record<string, string>,
+  ): MessageContent {
+    if (typeof content === "string") {
+      return Mustache.render(content, variables);
+    }
+
+    return content.map((part) => {
+      if (part.type === "text") {
+        return { ...part, text: Mustache.render(part.text, variables) };
+      }
+      return part;
     });
   }
 

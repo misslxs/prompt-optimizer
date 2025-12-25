@@ -5,11 +5,13 @@ import type {
   TextModel,
   TextModelConfig,
   Message,
+  MessageContentPart,
   LLMResponse,
   StreamHandlers,
   ToolDefinition,
   ParameterDefinition
 } from '../types'
+import { RequestConfigError } from '../errors'
 
 interface ModelOverride {
   id: string
@@ -104,6 +106,54 @@ export class OpenAIAdapter extends AbstractTextProviderAdapter {
           : baseModel.defaultParameterValues
       }
     })
+  }
+
+  protected validateMessages(messages: Message[]): void {
+    if (!Array.isArray(messages)) {
+      throw new RequestConfigError('Messages must be an array')
+    }
+
+    if (messages.length === 0) {
+      throw new RequestConfigError('Messages array cannot be empty')
+    }
+
+    for (const msg of messages) {
+      if (!msg.role) {
+        throw new RequestConfigError('Each message must have role and content')
+      }
+
+      if (!['system', 'user', 'assistant', 'tool'].includes(msg.role)) {
+        throw new RequestConfigError(`Invalid message role: ${msg.role}`)
+      }
+
+      if (typeof msg.content === 'string') {
+        if (!msg.content) {
+          throw new RequestConfigError('Each message must have role and content')
+        }
+        continue
+      }
+
+      if (!Array.isArray(msg.content) || msg.content.length === 0) {
+        throw new RequestConfigError('Message content must be a string or non-empty array')
+      }
+
+      msg.content.forEach((part) => {
+        if (!this.isValidContentPart(part)) {
+          throw new RequestConfigError('Message content contains invalid multimodal part')
+        }
+      })
+    }
+  }
+
+  private isValidContentPart(part: MessageContentPart): boolean {
+    if (!part || typeof part !== 'object' || !('type' in part)) return false
+    if (part.type === 'text') {
+      return typeof part.text === 'string'
+    }
+    if (part.type === 'image_url') {
+      return typeof part.image_url?.url === 'string'
+    }
+    return false
   }
 
   /**
@@ -847,4 +897,3 @@ export class OpenAIAdapter extends AbstractTextProviderAdapter {
     }
   }
 }
-

@@ -7,22 +7,36 @@ export type ComponentSize = 'small' | 'medium' | 'large'
 export type LayoutMode = 'compact' | 'normal' | 'minimal'
 export type ButtonSize = 'small' | 'medium' | 'large'
 
+export type TestImageSourceType = 'url' | 'file'
+
+export interface TestImagePayload {
+  sourceType: TestImageSourceType
+  url: string
+  name?: string
+  isValid: boolean
+  error?: string
+}
+
 // TestInputSection 组件类型
 export interface TestInputSectionProps {
   modelValue: string
   label: string
   placeholder?: string
   helpText?: string
+  imageValue?: TestImagePayload | null
   disabled?: boolean
   size?: ComponentSize
   mode?: 'compact' | 'normal'
   enableFullscreen?: boolean
   minRows?: number
   maxRows?: number
+  showTextInput?: boolean
+  showImageInput?: boolean
 }
 
 export interface TestInputSectionEmits {
   'update:modelValue': [value: string]
+  'update:imageValue': [value: TestImagePayload | null]
 }
 
 // TestControlBar 组件类型
@@ -81,6 +95,7 @@ export interface TestAreaPanelProps {
   
   // 测试内容
   testContent?: string
+  testImage?: TestImagePayload | null
   isCompareMode?: boolean
   
   // 功能开关
@@ -103,6 +118,7 @@ export interface TestAreaPanelProps {
 
 export interface TestAreaPanelEmits {
   'update:testContent': [value: string]
+  'update:testImage': [value: TestImagePayload | null]
   'update:isCompareMode': [value: boolean]
   'test': []
   'compare-toggle': []

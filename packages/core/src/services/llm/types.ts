@@ -134,12 +134,18 @@ export interface ToolDefinition {
  */
 export type MessageRole = 'system' | 'user' | 'assistant' | 'tool';
 
+export type MessageContentPart =
+  | { type: 'text'; text: string }
+  | { type: 'image_url'; image_url: { url: string } }
+
+export type MessageContent = string | MessageContentPart[]
+
 /**
  * 消息类型
  */
 export interface Message {
   role: MessageRole;
-  content: string;
+  content: MessageContent;
   name?: string;
   tool_calls?: ToolCall[];
   tool_call_id?: string;

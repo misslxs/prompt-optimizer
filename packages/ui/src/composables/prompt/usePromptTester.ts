@@ -3,10 +3,10 @@ import { reactive, type Ref, type ComputedRef } from 'vue'
 import { useToast } from '../ui/useToast'
 import { useI18n } from 'vue-i18n'
 import { getErrorMessage } from '../../utils/error'
-import type { OptimizationMode } from '@prompt-optimizer/core'
+import type { OptimizationMode, Message, MessageContentPart } from '@prompt-optimizer/core'
 import type { AppServices } from '../../types/services'
-import type { ConversationMessage } from '../../types/variable'
 import type { VariableManagerHooks } from './useVariableManager'
+import type { TestImagePayload } from '../../components/types/test-area'
 
 /**
  * 基础模式提示词测试 Composable
@@ -63,7 +63,8 @@ export function usePromptTester(
       optimizedPrompt: string,
       testContent: string,
       isCompareMode: boolean,
-      testVariables?: Record<string, string>
+      testVariables?: Record<string, string>,
+      testImage?: TestImagePayload | null
     ) => {
       if (!services.value?.promptService) {
         toast.error(t('toast.error.serviceInit'))
@@ -83,14 +84,16 @@ export function usePromptTester(
             prompt,
             optimizedPrompt,
             testContent,
-            testVariables
+            testVariables,
+            testImage
           ),
           state.testPromptWithType(
             'optimized',
             prompt,
             optimizedPrompt,
             testContent,
-            testVariables
+            testVariables,
+            testImage
           )
         ])
       } else {
@@ -100,7 +103,8 @@ export function usePromptTester(
           prompt,
           optimizedPrompt,
           testContent,
-          testVariables
+          testVariables,
+          testImage
         )
       }
     },
@@ -113,7 +117,8 @@ export function usePromptTester(
       prompt: string,
       optimizedPrompt: string,
       testContent: string,
-      testVars?: Record<string, string>
+      testVars?: Record<string, string>,
+      testImage?: TestImagePayload | null
     ) => {
       const isOriginal = type === 'original'
       const selectedPrompt = isOriginal ? prompt : optimizedPrompt
@@ -168,6 +173,9 @@ export function usePromptTester(
         let systemPrompt = ''
         let userPrompt = ''
 
+        const hasValidImage =
+          optimizationMode.value === 'system' && !!testImage?.isValid
+
         if (optimizationMode.value === 'user') {
           // 用户提示词模式：提示词作为用户输入
           systemPrompt = ''
@@ -175,7 +183,7 @@ export function usePromptTester(
         } else {
           // 系统提示词模式：提示词作为系统消息
           systemPrompt = selectedPrompt
-          userPrompt = testContent || '请按照你的角色设定，展示你的能力并与我互动。'
+          userPrompt = testContent || (hasValidImage ? '' : '请按照你的角色设定，展示你的能力并与我互动。')
         }
 
         // 变量：合并全局变量 + 测试变量
@@ -188,9 +196,18 @@ export function usePromptTester(
         }
 
         // 构造简单的消息列表
-        const messages: ConversationMessage[] = [
+        const userMessageContent = hasValidImage
+          ? ([
+              ...(userPrompt
+                ? [{ type: 'text', text: userPrompt }]
+                : []),
+              { type: 'image_url', image_url: { url: testImage!.url } }
+            ] as MessageContentPart[])
+          : userPrompt
+
+        const messages: Message[] = [
           ...(systemPrompt ? [{ role: 'system' as const, content: systemPrompt }] : []),
-          { role: 'user' as const, content: userPrompt },
+          { role: 'user' as const, content: userMessageContent },
         ]
 
         // 使用自定义会话测试

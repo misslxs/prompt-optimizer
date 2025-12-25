@@ -4,6 +4,7 @@
         <NCard v-if="showTestInput" :style="{ flexShrink: 0 }" size="small">
             <TestInputSection
                 v-model="testContentProxy"
+                v-model:image-value="testImageProxy"
                 :label="t('test.content')"
                 :placeholder="t('test.placeholder')"
                 :help-text="t('test.simpleMode.help')"
@@ -150,6 +151,7 @@ import TestInputSection from "./TestInputSection.vue";
 import TestControlBar from "./TestControlBar.vue";
 import TestResultSection from "./TestResultSection.vue";
 import ToolCallDisplay from "./ToolCallDisplay.vue";
+import type { TestImagePayload } from './types/test-area'
 
 const { t } = useI18n();
 
@@ -180,6 +182,7 @@ interface Props {
 
     // 测试内容
     testContent?: string;
+    testImage?: TestImagePayload | null;
     optimizedPrompt?: string; // 优化后的提示词（用于变量检测）
     isCompareMode?: boolean;
 
@@ -226,6 +229,7 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
     isTestRunning: false,
     testContent: "",
+    testImage: null,
     isCompareMode: true,
     enableCompareMode: true,
     enableFullscreen: true,
@@ -254,6 +258,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
     "update:testContent": [value: string];
+    "update:testImage": [value: TestImagePayload | null];
     "update:isCompareMode": [value: boolean];
     test: []; // 🆕 传递测试变量
     "compare-toggle": [];
@@ -283,6 +288,14 @@ const testContentProxy = computed({
     get: () => props.testContent,
     set: (value: string) => {
         emit("update:testContent", value);
+        recordUpdate();
+    },
+});
+
+const testImageProxy = computed({
+    get: () => props.testImage ?? null,
+    set: (value: TestImagePayload | null) => {
+        emit("update:testImage", value);
         recordUpdate();
     },
 });
@@ -362,7 +375,12 @@ const primaryActionDisabled = computed(() => {
     if (props.isTestRunning) return true;
 
     // 系统提示词模式需要测试内容
-    if (props.optimizationMode === "system" && !props.testContent.trim()) {
+    const hasValidImage = !!props.testImage?.isValid;
+    if (
+        props.optimizationMode === "system" &&
+        !props.testContent.trim() &&
+        !hasValidImage
+    ) {
         return true;
     }
 

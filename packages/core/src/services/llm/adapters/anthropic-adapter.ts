@@ -10,6 +10,7 @@ import type {
   ParameterDefinition,
   ToolDefinition
 } from '../types'
+import { RequestConfigError } from '../errors'
 
 // Anthropic 建议对于非流式请求使用较小的 max_tokens 值
 // 过大的值可能触发 "Streaming is required for operations that may take longer than 10 minutes" 错误
@@ -538,7 +539,7 @@ export class AnthropicAdapter extends AbstractTextProviderAdapter {
       .filter(msg => msg.role !== 'system')
       .map(msg => ({
         role: msg.role as 'user' | 'assistant',
-        content: msg.content
+        content: this.extractTextContent(msg.content)
       }))
   }
 
@@ -548,8 +549,13 @@ export class AnthropicAdapter extends AbstractTextProviderAdapter {
   private extractSystemMessage(messages: Message[]): string | undefined {
     const systemMessages = messages.filter(msg => msg.role === 'system')
     return systemMessages.length > 0
-      ? systemMessages.map(msg => msg.content).join('\n')
+      ? systemMessages.map(msg => this.extractTextContent(msg.content)).join('\n')
       : undefined
+  }
+
+  private extractTextContent(content: Message['content']): string {
+    if (typeof content === 'string') return content
+    throw new RequestConfigError('Anthropic adapter does not support image content')
   }
 
   /**

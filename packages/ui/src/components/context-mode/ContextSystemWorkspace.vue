@@ -144,6 +144,8 @@
             :is-test-running="conversationTester.testResults.isTestingOriginal || conversationTester.testResults.isTestingOptimized"
             :is-compare-mode="isCompareMode"
             :enable-compare-mode="true"
+            :test-image="props.testImage"
+            @update:test-image="emit('update:testImage', $event)"
             @update:isCompareMode="emit('update:isCompareMode', $event)"
             @compare-toggle="emit('compare-toggle')"
             :model-name="props.testModelName"
@@ -241,7 +243,7 @@ import type {
     ToolDefinition,
     ProSystemEvaluationContext,
 } from "@prompt-optimizer/core";
-import type { TestAreaPanelInstance } from "../types/test-area";
+import type { TestAreaPanelInstance, TestImagePayload } from "../types/test-area";
 import type { IteratePayload, SaveFavoritePayload } from "../../types/workspace";
 import type { VariableManagerHooks } from '../../composables/prompt/useVariableManager'
 import type { AppServices } from '../../types/services'
@@ -290,6 +292,9 @@ interface Props {
     selectedTestModel?: string;
     /** 测试模型名称（用于显示标签） */
     testModelName?: string;
+
+    /** 测试图片（系统提示词模式） */
+    testImage?: TestImagePayload | null;
 }
 
 interface ConversationSnapshotEntry extends ConversationMessage {
@@ -312,6 +317,7 @@ const props = withDefaults(defineProps<Props>(), {
     resultVerticalLayout: false,
     enableMessageOptimization: false,
     isCompareMode: false,
+    testImage: null,
 });
 
 // Emits 定义
@@ -345,6 +351,7 @@ const emit = defineEmits<{
     // 🆕 对比模式
     "update:isCompareMode": [value: boolean];
     "compare-toggle": [];
+    "update:testImage": [value: TestImagePayload | null];
 }>();
 
 const { t } = useI18n();
@@ -566,7 +573,8 @@ const handleTestWithVariables = async () => {
     await conversationTester.executeTest(
         props.isCompareMode || false,
         testVariables,
-        testAreaPanelRef.value
+        testAreaPanelRef.value,
+        props.testImage || null
     );
 };
 
